@@ -1,20 +1,3 @@
-// src/pages/LoginPage.jsx
-// ---------------------------------------------------------------
-// Login Page
-//
-// What this page does:
-//   1. Shows a form with Email and Password fields.
-//   2. On submit, calls POST /api/auth/login via our api.js service.
-//   3. If successful:
-//      - Saves the JWT token to localStorage (key: "token")
-//      - Saves the user object to localStorage (key: "user")
-//      - Redirects to the correct dashboard based on the user's role:
-//          ADMIN       → /admin
-//          USER        → /dashboard
-//          STORE_OWNER → /owner
-//   4. If it fails, shows the error message returned by the backend.
-//   5. Shows a loading state while the request is in progress.
-// ---------------------------------------------------------------
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -26,18 +9,17 @@ function LoginPage() {
   const [password, setPassword] = useState('');
 
   // ── UI state ──────────────────────────────────────────────────
-  const [loading, setLoading]   = useState(false);  // true while waiting for backend
-  const [error, setError]       = useState('');      // error message to show
+  const [loading, setLoading]   = useState(false); 
+  const [error, setError]       = useState('');      
 
   const navigate = useNavigate();
 
   // ── Form submit handler ───────────────────────────────────────
   const handleSubmit = async (e) => {
-    e.preventDefault();      // prevent the browser from refreshing the page
-    setError('');            // clear any previous error
+    e.preventDefault();     
+    setError('');            
 
-    // Basic front-end validation (backend also validates, but this gives
-    // faster feedback without a network round-trip)
+
     if (!email.trim()) {
       setError('Please enter your email address.');
       return;
@@ -47,22 +29,19 @@ function LoginPage() {
       return;
     }
 
-    setLoading(true);  // show loading state on the button
+    setLoading(true);  
 
     try {
-      // Call POST /api/auth/login
-      // loginUser() is defined in src/services/api.js
+
       const response = await loginUser(email, password);
 
-      // The backend returns:
-      // { success: true, data: { token, user: { id, name, email, role } } }
       const { token, user } = response.data.data;
 
       // Save token and user to localStorage so other pages can use them
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Redirect based on the user's role
+    
       if (user.role === 'ADMIN') {
         navigate('/admin');
       } else if (user.role === 'STORE_OWNER') {
@@ -73,15 +52,14 @@ function LoginPage() {
       }
 
     } catch (err) {
-      // The backend sends error messages in err.response.data.message
-      // If the network is down, err.message will say "Network Error"
+   
       const message =
         err.response?.data?.message ||
         err.message ||
         'Login failed. Please try again.';
       setError(message);
     } finally {
-      setLoading(false);  // always stop the loading state
+      setLoading(false);  
     }
   };
 
@@ -90,11 +68,9 @@ function LoginPage() {
     <div className="auth-wrapper">
       <div className="auth-card">
 
-        {/* Page heading */}
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-subtitle">Sign in to your account to continue</p>
 
-        {/* Error message — only shown when error state is not empty */}
         {error && (
           <div className="alert alert-error">{error}</div>
         )}

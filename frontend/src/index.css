@@ -1,17 +1,4 @@
-/* ================================================================
-   index.css — Global Base Styles
-   ================================================================
-   This file contains:
-   - CSS reset / base defaults
-   - Color variables
-   - Reusable utility classes (buttons, inputs, tables, cards, alerts)
-   - Navbar styles
-   All pages import this file automatically via main.jsx
-   ================================================================ */
 
-/* ----------------------------------------------------------------
-   1. CSS Variables (color and spacing tokens)
-   ---------------------------------------------------------------- */
 :root {
   --primary:        #2563eb;   /* Main blue */
   --primary-dark:   #1d4ed8;   /* Darker blue for hover */

@@ -1,17 +1,3 @@
-// src/App.jsx
-// ---------------------------------------------------------------
-// Root component — defines all page routes.
-//
-// Routes:
-//   /               → redirect to /login
-//   /login          → Login page (public)
-//   /register       → Register page (public)
-//   /dashboard      → Normal User Dashboard (USER role only)
-//   /admin          → Admin Dashboard (ADMIN role only)
-//   /owner          → Store Owner Dashboard (STORE_OWNER role only)
-//
-// PrivateRoute wraps protected pages and enforces role-based access.
-// ---------------------------------------------------------------
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 

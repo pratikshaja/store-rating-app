@@ -1,14 +1,3 @@
-// src/pages/UserDashboard.jsx
-// ---------------------------------------------------------------
-// Normal User Dashboard
-//
-// What this page does:
-//   1. Displays a searchable list of stores with overall average ratings.
-//   2. Displays the user's submitted rating for each store (if rated).
-//   3. Allows submitting a new rating or updating an existing rating (1 to 5 stars).
-//   4. Provides a "Change Password" section so users can update their password.
-//   5. Features search by store name or address.
-// ---------------------------------------------------------------
 
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
@@ -50,7 +39,6 @@ function UserDashboard() {
       const storeList = response.data.data || [];
       setStores(storeList);
 
-      // Pre-fill rating selection with user's existing rating if available
       const initialRatings = {};
       storeList.forEach((store) => {
         if (store.user_rating) {
@@ -71,25 +59,21 @@ function UserDashboard() {
     }
   };
 
-  // Initial load on component mount
   useEffect(() => {
     fetchStores();
   }, []);
 
-  // Handle Search submit
   const handleSearch = (e) => {
     e.preventDefault();
     fetchStores(searchName, searchAddress);
   };
 
-  // Reset Search
   const handleResetSearch = () => {
     setSearchName('');
     setSearchAddress('');
     fetchStores('', '');
   };
 
-  // Handle rating submission/update for a store
   const handleRatingSubmit = async (storeId) => {
     const ratingValue = Number(selectedRatings[storeId] || 5);
 
