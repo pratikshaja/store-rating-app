@@ -1,23 +1,8 @@
-// src/controllers/ownerController.js
-// ---------------------------------------------------------------
-// Store Owner dashboard API handlers:
-//   - getDashboard : Avg rating + rater count for all owned stores
-//   - getRatings   : List of users who rated the owner's store(s)
-//
-// SECURITY:
-//   - We use req.user.id (from the JWT) as owner_id in all queries.
-//   - This guarantees a store owner can ONLY see data for stores
-//     that belong to them — never another owner's data.
-// ---------------------------------------------------------------
+
 
 const pool = require('../config/db');
 
-// ---------------------------------------------------------------
-// GET /api/owner/dashboard
-// Protected — STORE_OWNER only
-// Returns average rating, total raters, and store info for all
-// stores owned by the logged-in store owner.
-// ---------------------------------------------------------------
+
 const getDashboard = async (req, res, next) => {
   try {
     const ownerId = req.user.id; // Always from the JWT — never req.body

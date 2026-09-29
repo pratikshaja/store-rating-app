@@ -1,14 +1,4 @@
-// src/routes/adminRoutes.js
-// ---------------------------------------------------------------
-// Admin Routes — ALL require: authenticate + authorize('ADMIN')
-//
-// GET    /api/admin/dashboard     — Dashboard stats
-// POST   /api/admin/users         — Create any user role
-// GET    /api/admin/users         — List users (filter + sort)
-// GET    /api/admin/users/:id     — Single user detail
-// POST   /api/admin/stores        — Add a new store
-// GET    /api/admin/stores        — List stores (filter + sort)
-// ---------------------------------------------------------------
+
 
 const express          = require('express');
 const adminController  = require('../controllers/adminController');

@@ -1,17 +1,7 @@
-// src/validators/authValidators.js
-// ---------------------------------------------------------------
-// Validation rules for authentication endpoints.
-//
-// express-validator's body() function creates a validation chain.
-// Each chain checks one field and attaches error messages when
-// the rule fails. All chains for a route are put in an array.
-// ---------------------------------------------------------------
 
 const { body } = require('express-validator');
 
-// ---------------------------------------------------------------
-// REGISTER — POST /api/auth/register
-// ---------------------------------------------------------------
+
 const register = [
   body('name')
     .trim()
@@ -38,9 +28,7 @@ const register = [
     .isLength({ max: 400 }).withMessage('Address must not exceed 400 characters.'),
 ];
 
-// ---------------------------------------------------------------
-// LOGIN — POST /api/auth/login
-// ---------------------------------------------------------------
+
 const login = [
   body('email')
     .trim()
@@ -52,9 +40,7 @@ const login = [
     .notEmpty().withMessage('Password is required.'),
 ];
 
-// ---------------------------------------------------------------
-// CHANGE PASSWORD — PATCH /api/auth/password
-// ---------------------------------------------------------------
+
 const changePassword = [
   body('currentPassword')
     .notEmpty().withMessage('Current password is required.'),

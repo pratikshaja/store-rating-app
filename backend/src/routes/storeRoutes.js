@@ -1,11 +1,3 @@
-// src/routes/storeRoutes.js
-// ---------------------------------------------------------------
-// Store & Rating Routes
-//
-// GET   /api/stores          — All authenticated users can view stores
-// GET   /api/stores/:id      — All authenticated users can view a store
-// PUT   /api/stores/:id/rating — USER role only can submit/update ratings
-// ---------------------------------------------------------------
 
 const express          = require('express');
 const storeController  = require('../controllers/storeController');

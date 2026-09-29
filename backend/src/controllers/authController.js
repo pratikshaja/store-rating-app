@@ -1,26 +1,12 @@
-// src/controllers/authController.js
-// ---------------------------------------------------------------
-// Handles all authentication-related requests:
-//   - register    : Create a new normal user account
-//   - login       : Log in for any role, get a JWT
-//   - getMe       : Get the currently logged-in user's profile
-//   - changePassword : Update own password securely
-//
-// Every function is async and uses try/catch.
-// Errors are passed to next(err) → handled by errorHandler.js
-// ---------------------------------------------------------------
 
 const bcrypt = require('bcrypt');
 const jwt    = require('jsonwebtoken');
 const pool   = require('../config/db');
 
-// How many bcrypt "rounds" to use for hashing.
-// 10 is the recommended balance of security vs speed.
+
 const SALT_ROUNDS = 10;
 
-// ---------------------------------------------------------------
-// Helper: generate a JWT token for a user
-// ---------------------------------------------------------------
+
 const generateToken = (user) => {
   const payload = {
     id:    user.id,
@@ -32,10 +18,7 @@ const generateToken = (user) => {
   });
 };
 
-// ---------------------------------------------------------------
-// POST /api/auth/register
-// Public — creates a USER account only (never ADMIN or STORE_OWNER)
-// ---------------------------------------------------------------
+
 const register = async (req, res, next) => {
   try {
     const { name, email, password, address } = req.body;
@@ -52,10 +35,10 @@ const register = async (req, res, next) => {
       });
     }
 
-    // 2. Hash the password (never store plain text!)
+  
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // 3. Insert the new user — role is always USER from public registration
+    
     const [result] = await pool.query(
       `INSERT INTO users (name, email, password, address, role)
        VALUES (?, ?, ?, ?, 'USER')`,
@@ -73,10 +56,7 @@ const register = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// POST /api/auth/login
-// Public — accepts all roles, returns JWT on success
-// ---------------------------------------------------------------
+
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;

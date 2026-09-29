@@ -1,13 +1,8 @@
-// src/validators/adminValidators.js
-// ---------------------------------------------------------------
-// Validation rules for admin-only endpoints.
-// ---------------------------------------------------------------
+
 
 const { body } = require('express-validator');
 
-// ---------------------------------------------------------------
-// CREATE USER (admin creates any role) — POST /api/admin/users
-// ---------------------------------------------------------------
+
 const createUser = [
   body('name')
     .trim()
@@ -39,9 +34,7 @@ const createUser = [
     .withMessage('Role must be one of: ADMIN, USER, STORE_OWNER.'),
 ];
 
-// ---------------------------------------------------------------
-// CREATE STORE — POST /api/admin/stores
-// ---------------------------------------------------------------
+
 const createStore = [
   body('name')
     .trim()

@@ -1,38 +1,15 @@
-// src/controllers/adminController.js
-// ---------------------------------------------------------------
-// All admin-only API handlers:
-//   - getDashboard : Total counts for users, stores, ratings
-//   - createUser   : Admin creates user of ANY role
-//   - getUsers     : List all users (filter + sort via query params)
-//   - getUserById  : Single user detail
-//   - createStore  : Admin adds a new store
-//   - getStores    : List all stores (filter + sort)
-//
-// SECURITY:
-//   - All routes that use this controller are protected by
-//     authenticate + authorize('ADMIN') middleware in the router.
-//   - SQL injection is prevented by parameterized queries (?).
-//   - Sorting columns are validated against an ALLOWLIST so
-//     a user cannot inject column names.
-// ---------------------------------------------------------------
 
 const bcrypt = require('bcrypt');
 const pool   = require('../config/db');
 
 const SALT_ROUNDS = 10;
 
-// Allowlists prevent SQL injection in ORDER BY clauses
-// (parameterized queries don't work for column names).
 const USER_SORT_ALLOWLIST  = ['name', 'email', 'address', 'role', 'created_at'];
 const STORE_SORT_ALLOWLIST = ['name', 'email', 'address', 'created_at'];
 
-// ---------------------------------------------------------------
-// GET /api/admin/dashboard
-// Returns total counts: users, stores, ratings
-// ---------------------------------------------------------------
+
 const getDashboard = async (req, res, next) => {
   try {
-    // Run all three counts in parallel for speed
     const [
       [usersResult],
       [storesResult],
@@ -56,15 +33,10 @@ const getDashboard = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// POST /api/admin/users
-// Admin creates a user of any role (ADMIN, USER, STORE_OWNER)
-// ---------------------------------------------------------------
 const createUser = async (req, res, next) => {
   try {
     const { name, email, password, address, role } = req.body;
 
-    // Check for duplicate email
     const [existing] = await pool.query(
       'SELECT id FROM users WHERE email = ?',
       [email]
@@ -94,27 +66,14 @@ const createUser = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/admin/users
-// List all users with optional filtering and sorting.
-//
-// Query parameters:
-//   ?name=John          — filter by name (partial, case-insensitive)
-//   ?email=john@        — filter by email (partial)
-//   ?address=NY         — filter by address (partial)
-//   ?role=USER          — filter by exact role
-//   ?sort=name          — sort column (allowlisted)
-//   ?order=asc|desc     — sort direction (default: asc)
-// ---------------------------------------------------------------
+
 const getUsers = async (req, res, next) => {
   try {
     const { name, email, address, role, sort = 'created_at', order = 'asc' } = req.query;
 
-    // Validate sort column against allowlist (SQL injection prevention)
     const sortColumn = USER_SORT_ALLOWLIST.includes(sort) ? sort : 'created_at';
     const sortOrder  = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
 
-    // Build dynamic WHERE clause with only the filters the caller provided
     const conditions = [];
     const params     = [];
 
@@ -139,7 +98,6 @@ const getUsers = async (req, res, next) => {
       ? `WHERE ${conditions.join(' AND ')}`
       : '';
 
-    // Note: sortColumn is safe because it was validated against the allowlist
     const sql = `
       SELECT id, name, email, address, role, created_at
       FROM users
@@ -159,16 +117,11 @@ const getUsers = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/admin/users/:id
-// Get a single user's full details.
-// For store owners: also shows their store + avg rating.
-// ---------------------------------------------------------------
+
 const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Fetch the user
     const [rows] = await pool.query(
       'SELECT id, name, email, address, role, created_at FROM users WHERE id = ?',
       [id]
@@ -180,7 +133,6 @@ const getUserById = async (req, res, next) => {
 
     const user = rows[0];
 
-    // If this user is a store owner, fetch their store rating info
     let storeInfo = null;
     if (user.role === 'STORE_OWNER') {
       const [storeRows] = await pool.query(
@@ -208,15 +160,11 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// POST /api/admin/stores
-// Admin adds a new store and assigns it to a STORE_OWNER
-// ---------------------------------------------------------------
+
 const createStore = async (req, res, next) => {
   try {
     const { name, email, address, owner_id } = req.body;
 
-    // Verify the owner exists AND has the right role
     const [ownerRows] = await pool.query(
       'SELECT id, name FROM users WHERE id = ? AND role = ?',
       [owner_id, 'STORE_OWNER']
@@ -229,7 +177,6 @@ const createStore = async (req, res, next) => {
       });
     }
 
-    // Check store email uniqueness
     const [existingStore] = await pool.query(
       'SELECT id FROM stores WHERE email = ?',
       [email]
@@ -264,18 +211,6 @@ const createStore = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/admin/stores
-// List all stores with optional filtering and sorting.
-// Also shows each store's average rating and total rating count.
-//
-// Query parameters:
-//   ?name=    — partial name filter
-//   ?email=   — partial email filter
-//   ?address= — partial address filter
-//   ?sort=name|email|address|created_at
-//   ?order=asc|desc
-// ---------------------------------------------------------------
 const getStores = async (req, res, next) => {
   try {
     const { name, email, address, sort = 'created_at', order = 'asc' } = req.query;
