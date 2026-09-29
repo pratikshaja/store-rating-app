@@ -1,15 +1,4 @@
-// src/routes/authRoutes.js
-// ---------------------------------------------------------------
-// Authentication Routes
-//
-// Public:
-//   POST   /api/auth/register  — Create a normal USER account
-//   POST   /api/auth/login     — Log in (any role), receive JWT
-//
-// Protected (require a valid JWT):
-//   GET    /api/auth/me        — Get current user's profile
-//   PATCH  /api/auth/password  — Change own password
-// ---------------------------------------------------------------
+
 
 const express        = require('express');
 const authController = require('../controllers/authController');

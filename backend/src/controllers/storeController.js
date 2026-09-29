@@ -1,29 +1,8 @@
-// src/controllers/storeController.js
-// ---------------------------------------------------------------
-// Store and Rating API handlers for normal users:
-//   - getAllStores  : List all stores with avg rating + user's own rating
-//   - getStoreById  : Single store detail
-//   - rateStore     : Upsert a rating (submit or update, USER only)
-//
-// SECURITY:
-//   - rateStore enforces that req.user.id is used as user_id,
-//     so a user can never submit ratings on behalf of someone else.
-//   - Only users with role = USER can rate stores (enforced in router).
-// ---------------------------------------------------------------
+
 
 const pool = require('../config/db');
 
-// ---------------------------------------------------------------
-// GET /api/stores
-// Protected — accessible to all authenticated users
-// Returns all stores with:
-//   - avg_rating   : calculated from all submitted ratings
-//   - user_rating  : this user's own rating (null if not rated)
-//
-// Query parameters:
-//   ?name=    — partial store name filter
-//   ?address= — partial address filter
-// ---------------------------------------------------------------
+
 const getAllStores = async (req, res, next) => {
   try {
     const { name, address } = req.query;

@@ -1,7 +1,4 @@
--- ============================================================
--- Store Rating App — MySQL Database Schema
--- Run this entire file in MySQL Workbench or mysql CLI
--- ============================================================
+
 
 -- 1. Create and select the database
 CREATE DATABASE IF NOT EXISTS store_rating_db
