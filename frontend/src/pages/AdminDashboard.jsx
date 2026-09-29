@@ -1,18 +1,3 @@
-// src/pages/AdminDashboard.jsx
-// ---------------------------------------------------------------
-// Admin Dashboard
-//
-// What this page does:
-//   1. Displays summary cards (Total Users, Total Stores, Total Ratings).
-//   2. User Management:
-//      - Search & filter users by name, email, address, or role.
-//      - Add new user form (ADMIN, USER, STORE_OWNER).
-//      - View details for any user (shows store details if STORE_OWNER).
-//   3. Store Management:
-//      - Search & list all stores with owner details and ratings.
-//      - Add new store form (assigns to a STORE_OWNER).
-//   4. Navigation & Logout via shared Navbar.
-// ---------------------------------------------------------------
 
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '../components/Navbar';
@@ -26,7 +11,6 @@ import {
 } from '../services/api';
 
 function AdminDashboard() {
-  // ── Active tab ("users" or "stores") ───────────────────────────
   const [activeTab, setActiveTab] = useState('users');
 
   // ── Dashboard summary stats ───────────────────────────────────

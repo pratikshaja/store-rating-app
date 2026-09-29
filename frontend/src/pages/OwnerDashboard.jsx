@@ -1,15 +1,3 @@
-// src/pages/OwnerDashboard.jsx
-// ---------------------------------------------------------------
-// Store Owner Dashboard
-//
-// What this page does:
-//   1. Displays summary card(s) for store(s) owned by the logged-in owner,
-//      showing average rating and total ratings count.
-//   2. Displays a table of all users who submitted ratings for the store(s),
-//      including rating value, user name, and user email.
-//   3. Provides a "Change Password" section.
-//   4. Navigation & Logout via shared Navbar.
-// ---------------------------------------------------------------
 
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';

@@ -1,24 +1,9 @@
-// src/components/Navbar.jsx
-// ---------------------------------------------------------------
-// Shared Navbar component — used by all three dashboards.
-//
-// What it does:
-//   1. Reads the user's name from localStorage and displays it.
-//   2. Shows the app brand/title on the left.
-//   3. Has a Logout button that:
-//      - Removes the token and user from localStorage
-//      - Redirects to /login
-//
-// Props:
-//   title — the page/section title shown on the left (optional)
-// ---------------------------------------------------------------
 
 import { useNavigate } from 'react-router-dom';
 
 function Navbar({ title }) {
   const navigate = useNavigate();
 
-  // Read the user from localStorage (saved during login)
   let user = null;
   try {
     user = JSON.parse(localStorage.getItem('user'));
@@ -27,10 +12,8 @@ function Navbar({ title }) {
   }
 
   const handleLogout = () => {
-    // Clear all stored auth data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Redirect to login page
     navigate('/login');
   };
 
