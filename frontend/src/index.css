@@ -1,0 +1,448 @@
+/* ================================================================
+   index.css — Global Base Styles
+   ================================================================
+   This file contains:
+   - CSS reset / base defaults
+   - Color variables
+   - Reusable utility classes (buttons, inputs, tables, cards, alerts)
+   - Navbar styles
+   All pages import this file automatically via main.jsx
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   1. CSS Variables (color and spacing tokens)
+   ---------------------------------------------------------------- */
+:root {
+  --primary:        #2563eb;   /* Main blue */
+  --primary-dark:   #1d4ed8;   /* Darker blue for hover */
+  --primary-light:  #dbeafe;   /* Light blue for backgrounds */
+  --danger:         #dc2626;   /* Red for errors / delete */
+  --danger-light:   #fee2e2;   /* Light red background */
+  --success:        #16a34a;   /* Green for success */
+  --success-light:  #dcfce7;   /* Light green background */
+  --warning:        #d97706;   /* Orange for warnings */
+  --warning-light:  #fef3c7;   /* Light orange background */
+  --gray-50:        #f9fafb;
+  --gray-100:       #f3f4f6;
+  --gray-200:       #e5e7eb;
+  --gray-300:       #d1d5db;
+  --gray-400:       #9ca3af;
+  --gray-500:       #6b7280;
+  --gray-700:       #374151;
+  --gray-900:       #111827;
+  --white:          #ffffff;
+  --radius:         6px;
+  --shadow:         0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md:      0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ----------------------------------------------------------------
+   2. Reset & Base
+   ---------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--gray-900);
+  background-color: var(--gray-100);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--gray-900);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------------
+   3. Page Layout
+   ---------------------------------------------------------------- */
+.page-wrapper {
+  min-height: 100vh;
+  background-color: var(--gray-100);
+}
+
+.page-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 20px;
+}
+
+/* ----------------------------------------------------------------
+   4. Navbar
+   ---------------------------------------------------------------- */
+.navbar {
+  background-color: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.navbar-brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-user {
+  font-size: 14px;
+  color: var(--gray-500);
+}
+
+/* ----------------------------------------------------------------
+   5. Card
+   ---------------------------------------------------------------- */
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 4px;
+}
+
+.card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Stats row for dashboard */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ----------------------------------------------------------------
+   6. Buttons
+   ---------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--white);
+}
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: var(--white);
+}
+.btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-secondary {
+  background-color: var(--gray-200);
+  color: var(--gray-700);
+}
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--gray-300);
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ----------------------------------------------------------------
+   7. Form elements
+   ---------------------------------------------------------------- */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-bottom: 5px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background-color: var(--white);
+  color: var(--gray-900);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* ----------------------------------------------------------------
+   8. Alert / Message boxes
+   ---------------------------------------------------------------- */
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.alert-error {
+  background-color: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid #fca5a5;
+}
+
+.alert-success {
+  background-color: var(--success-light);
+  color: var(--success);
+  border: 1px solid #86efac;
+}
+
+.alert-info {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid #93c5fd;
+}
+
+/* ----------------------------------------------------------------
+   9. Table
+   ---------------------------------------------------------------- */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--white);
+  font-size: 14px;
+}
+
+thead {
+  background-color: var(--gray-50);
+}
+
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-700);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background-color: var(--gray-50);
+}
+
+/* ----------------------------------------------------------------
+   10. Auth pages (Login / Register)
+   ---------------------------------------------------------------- */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--gray-100);
+  padding: 24px 16px;
+}
+
+.auth-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-md);
+}
+
+.auth-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+}
+
+.auth-subtitle {
+  font-size: 14px;
+  color: var(--gray-500);
+  margin-bottom: 24px;
+}
+
+/* ----------------------------------------------------------------
+   11. Section separator
+   ---------------------------------------------------------------- */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* ----------------------------------------------------------------
+   12. Search bar
+   ---------------------------------------------------------------- */
+.search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-row .form-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* ----------------------------------------------------------------
+   13. Badge (for role display)
+   ---------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-admin    { background: #ede9fe; color: #6d28d9; }
+.badge-user     { background: var(--primary-light); color: var(--primary); }
+.badge-owner    { background: #d1fae5; color: #065f46; }
+
+/* ----------------------------------------------------------------
+   14. Star rating display
+   ---------------------------------------------------------------- */
+.stars {
+  color: #f59e0b;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+/* ----------------------------------------------------------------
+   15. Empty / Loading state
+   ---------------------------------------------------------------- */
+.empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--gray-400);
+  font-size: 14px;
+}
+
+.loading-text {
+  text-align: center;
+  padding: 20px;
+  color: var(--gray-400);
+  font-size: 14px;
+}
+
+/* ----------------------------------------------------------------
+   16. Responsive
+   ---------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 24px 16px;
+  }
+  .page-content {
+    padding: 16px 12px;
+  }
+  .navbar-inner {
+    padding: 0 12px;
+  }
+}
