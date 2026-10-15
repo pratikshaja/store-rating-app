@@ -40,7 +40,7 @@ I built this project to practice backend development, database management, and f
 ### 1. Clone the Repository
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
+git clone https://github.com/pratikshaja/store-rating-app.git
 cd YOUR_PROJECT_FOLDER
 ```
 
