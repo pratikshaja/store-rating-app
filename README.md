@@ -87,7 +87,6 @@ Run this file before starting the application for the first time.
 - MySQL must be running before starting the backend.
 - The backend requires valid database credentials and a JWT secret.
 - An admin account must be available in the database to access admin features.
-- Do not commit passwords, secret keys, or other sensitive information to GitHub.
 
 ## Learning Outcome
 
