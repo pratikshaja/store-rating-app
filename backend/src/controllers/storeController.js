@@ -1,162 +1,130 @@
 
+const { Op, fn, col } = require('sequelize');
+const { User, Store, Rating } = require('../models');
 
-const pool = require('../config/db');
-
-
+// Get all stores with search, average rating and user's rating
 const getAllStores = async (req, res, next) => {
   try {
-    const { name, address } = req.query;
+    const { name, address, sort = 'name', order = 'asc' } = req.query;
     const userId = req.user.id;
 
-    const conditions = [];
-    const params     = [];
+    const allowedSortFields = ['name', 'address', 'created_at'];
+    const sortColumn = allowedSortFields.includes(sort) ? sort : 'name';
+    const sortOrder = String(order).toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+
+    const where = {};
 
     if (name) {
-      conditions.push('s.name LIKE ?');
-      params.push(`%${name}%`);
+      where.name = { [Op.like]: `%${name}%` };
     }
+
     if (address) {
-      conditions.push('s.address LIKE ?');
-      params.push(`%${address}%`);
+      where.address = { [Op.like]: `%${address}%` };
     }
 
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
+    const stores = await Store.findAll({
+      where,
+      attributes: [
+        'id',
+        'name',
+        'address',
+        [
+          fn('ROUND', fn('AVG', col('ratings.rating')), 2),
+          'avg_rating',
+        ],
+        [fn('COUNT', col('ratings.id')), 'total_ratings'],
+      ],
+      include: [
+        {
+          model: Rating,
+          as: 'ratings',
+          attributes: [],
+          required: false,
+        },
+      ],
+      group: ['Store.id'],
+      order: [[sortColumn, sortOrder]],
+    });
 
-    // LEFT JOIN on ratings twice:
-    //   r_all   — to compute the overall average across ALL users
-    //   r_mine  — to get only the CURRENT user's rating
-    const sql = `
-      SELECT
-        s.id,
-        s.name,
-        s.address,
-        ROUND(AVG(r_all.rating), 2) AS avg_rating,
-        COUNT(r_all.id)             AS total_ratings,
-        r_mine.rating               AS user_rating
-      FROM stores s
-      LEFT JOIN ratings r_all  ON r_all.store_id  = s.id
-      LEFT JOIN ratings r_mine ON r_mine.store_id = s.id
-                               AND r_mine.user_id = ?
-      ${whereClause}
-      GROUP BY s.id, s.name, s.address, r_mine.rating
-      ORDER BY s.name ASC
-    `;
+    // Fetch the logged-in user's ratings separately to avoid
+    // counting the same rating multiple times in the average.
+    const myRatings = await Rating.findAll({
+      where: { user_id: userId },
+      attributes: ['store_id', 'rating'],
+    });
 
-    // userId must be the FIRST param (before the WHERE filters)
-    const [rows] = await pool.query(sql, [userId, ...params]);
+    const ratingMap = new Map(
+      myRatings.map((item) => [item.store_id, item.rating])
+    );
+
+    const data = stores.map((store) => {
+      const item = store.toJSON();
+
+      return {
+        ...item,
+        user_rating: ratingMap.has(item.id)
+          ? ratingMap.get(item.id)
+          : null,
+      };
+    });
 
     return res.status(200).json({
       success: true,
-      count:   rows.length,
-      data:    rows,
+      count: data.length,
+      data,
     });
   } catch (err) {
     next(err);
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/stores/:id
-// Protected — any authenticated user
-// Returns single store detail + avg rating + user's own rating
-// ---------------------------------------------------------------
+// Get one store's details
+
 const getStoreById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
+    const store = await Store.findByPk(req.params.id, {
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        [
+          fn('ROUND', fn('AVG', col('ratings.rating')), 2),
+          'avg_rating',
+        ],
+        [fn('COUNT', col('ratings.id')), 'total_ratings'],
+      ],
+      include: [
+        {
+          model: Rating,
+          as: 'ratings',
+          attributes: [],
+          required: false,
+        },
+      ],
+      group: ['Store.id'],
+    });
 
-    const [rows] = await pool.query(
-      `SELECT
-         s.id,
-         s.name,
-         s.email,
-         s.address,
-         ROUND(AVG(r_all.rating), 2) AS avg_rating,
-         COUNT(r_all.id)             AS total_ratings,
-         r_mine.rating               AS user_rating
-       FROM stores s
-       LEFT JOIN ratings r_all  ON r_all.store_id  = s.id
-       LEFT JOIN ratings r_mine ON r_mine.store_id = s.id
-                                AND r_mine.user_id = ?
-       WHERE s.id = ?
-       GROUP BY s.id, s.name, s.email, s.address, r_mine.rating`,
-      [userId, id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Store not found.' });
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found.',
+      });
     }
 
-    return res.status(200).json({ success: true, data: rows[0] });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ---------------------------------------------------------------
-// PUT /api/stores/:id/rating
-// Protected — only USER role (enforced in router)
-//
-// Upsert logic:
-//   - If the user has never rated this store → INSERT a new rating
-//   - If the user already rated this store   → UPDATE their rating
-//
-// The user cannot rate on behalf of someone else because we
-// always use req.user.id (from the verified JWT), never req.body.user_id.
-// ---------------------------------------------------------------
-const rateStore = async (req, res, next) => {
-  try {
-    const { id: storeId } = req.params;
-    const userId          = req.user.id;  // ALWAYS from the token, not the request body
-    const { rating }      = req.body;
-
-    // 1. Make sure the store exists
-    const [storeRows] = await pool.query(
-      'SELECT id FROM stores WHERE id = ?',
-      [storeId]
-    );
-    if (storeRows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Store not found.' });
-    }
-
-    // 2. Check if this user already has a rating for this store
-    const [existing] = await pool.query(
-      'SELECT id, rating FROM ratings WHERE user_id = ? AND store_id = ?',
-      [userId, storeId]
-    );
-
-    let message;
-    if (existing.length > 0) {
-      // UPDATE existing rating
-      await pool.query(
-        'UPDATE ratings SET rating = ? WHERE user_id = ? AND store_id = ?',
-        [rating, userId, storeId]
-      );
-      message = 'Your rating has been updated successfully.';
-    } else {
-      // INSERT new rating
-      await pool.query(
-        'INSERT INTO ratings (user_id, store_id, rating) VALUES (?, ?, ?)',
-        [userId, storeId, rating]
-      );
-      message = 'Rating submitted successfully.';
-    }
-
-    // 3. Return the new average rating for this store
-    const [avgRow] = await pool.query(
-      'SELECT ROUND(AVG(rating), 2) AS avg_rating FROM ratings WHERE store_id = ?',
-      [storeId]
-    );
+    const myRating = await Rating.findOne({
+      where: {
+        store_id: store.id,
+        user_id: req.user.id,
+      },
+      attributes: ['rating'],
+    });
 
     return res.status(200).json({
       success: true,
-      message,
       data: {
-        store_id:    Number(storeId),
-        user_rating: Number(rating),
-        avg_rating:  avgRow[0].avg_rating,
+        ...store.toJSON(),
+        user_rating: myRating ? myRating.rating : null,
       },
     });
   } catch (err) {
@@ -164,4 +132,64 @@ const rateStore = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllStores, getStoreById, rateStore };
+
+// Submit or update a rating
+const rateStore = async (req, res, next) => {
+  try {
+    const storeId = req.params.id;
+    const userId = req.user.id;
+    const ratingValue = Number(req.body.rating);
+
+    const store = await Store.findByPk(storeId);
+
+    if (!store) {
+      return res.status(404).json({
+        success: false,
+        message: 'Store not found.',
+      });
+    }
+
+    const [rating, created] = await Rating.findOrCreate({
+      where: {
+        user_id: userId,
+        store_id: storeId,
+      },
+      defaults: {
+        rating: ratingValue,
+      },
+    });
+
+    if (!created) {
+      rating.rating = ratingValue;
+      await rating.save();
+    }
+
+    const average = await Rating.findOne({
+      where: { store_id: storeId },
+      attributes: [
+        [fn('ROUND', fn('AVG', col('rating')), 2), 'avg_rating'],
+      ],
+      raw: true,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: created
+        ? 'Rating submitted successfully.'
+        : 'Your rating has been updated successfully.',
+      data: {
+        store_id: Number(storeId),
+        user_rating: ratingValue,
+        avg_rating: average.avg_rating,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getAllStores,
+  getStoreById,
+  rateStore,
+};

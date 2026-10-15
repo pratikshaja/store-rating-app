@@ -1,28 +1,55 @@
 
+const { Op, fn, col } = require('sequelize');
+const { User, Store, Rating } = require('../models');
 
-const pool = require('../config/db');
-
-
+// Store Owner dashboard
 const getDashboard = async (req, res, next) => {
   try {
-    const ownerId = req.user.id; // Always from the JWT — never req.body
+    // Owner ID must always come from the verified JWT
+    const ownerId = req.user.id;
 
-    const [rows] = await pool.query(
-      `SELECT
-         s.id               AS store_id,
-         s.name             AS store_name,
-         s.email            AS store_email,
-         s.address          AS store_address,
-         ROUND(AVG(r.rating), 2) AS avg_rating,
-         COUNT(r.id)        AS total_ratings
-       FROM stores s
-       LEFT JOIN ratings r ON r.store_id = s.id
-       WHERE s.owner_id = ?
-       GROUP BY s.id, s.name, s.email, s.address`,
-      [ownerId]
-    );
+    const stores = await Store.findAll({
+      where: { owner_id: ownerId },
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        [
+          fn('ROUND', fn('AVG', col('ratings.rating')), 2),
+          'avg_rating',
+        ],
+        [
+          fn('COUNT', col('ratings.id')),
+          'total_ratings',
+        ],
+      ],
+      include: [
+        {
+          model: Rating,
+          as: 'ratings',
+          attributes: [],
+          required: false,
+        },
+      ],
+      group: ['Store.id'],
+      order: [['name', 'ASC']],
+    });
 
-    if (rows.length === 0) {
+    const data = stores.map((store) => {
+      const item = store.toJSON();
+
+      return {
+        store_id: item.id,
+        store_name: item.name,
+        store_email: item.email,
+        store_address: item.address,
+        avg_rating: item.avg_rating,
+        total_ratings: item.total_ratings,
+      };
+    });
+
+    if (data.length === 0) {
       return res.status(200).json({
         success: true,
         message: 'You do not own any stores yet.',
@@ -32,50 +59,70 @@ const getDashboard = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      data: rows,
+      data,
     });
   } catch (err) {
     next(err);
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/owner/ratings
-// Protected — STORE_OWNER only
-// Returns all ratings submitted for the owner's store(s),
-// including the name and email of each user who submitted a rating.
-// ---------------------------------------------------------------
+// List users who rated this owner's stores
 const getRatings = async (req, res, next) => {
   try {
     const ownerId = req.user.id;
 
-    const [rows] = await pool.query(
-      `SELECT
-         r.id               AS rating_id,
-         r.rating,
-         r.created_at,
-         r.updated_at,
-         u.id               AS user_id,
-         u.name             AS user_name,
-         u.email            AS user_email,
-         s.id               AS store_id,
-         s.name             AS store_name
-       FROM ratings r
-       JOIN users  u ON u.id = r.user_id
-       JOIN stores s ON s.id = r.store_id
-       WHERE s.owner_id = ?
-       ORDER BY r.updated_at DESC`,
-      [ownerId]
-    );
+    const ratings = await Rating.findAll({
+      attributes: [
+        'id',
+        'rating',
+        'created_at',
+        'updated_at',
+      ],
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email'],
+          required: true,
+        },
+        {
+          model: Store,
+          as: 'store',
+          attributes: ['id', 'name'],
+          where: { owner_id: ownerId },
+          required: true,
+        },
+      ],
+      order: [['updated_at', 'DESC']],
+    });
+
+    const data = ratings.map((rating) => {
+      const item = rating.toJSON();
+
+      return {
+        rating_id: item.id,
+        rating: item.rating,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        user_id: item.user.id,
+        user_name: item.user.name,
+        user_email: item.user.email,
+        store_id: item.store.id,
+        store_name: item.store.name,
+      };
+    });
 
     return res.status(200).json({
       success: true,
-      count:   rows.length,
-      data:    rows,
+      count: data.length,
+      data,
     });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { getDashboard, getRatings };
+module.exports = {
+  getDashboard,
+  getRatings,
+};

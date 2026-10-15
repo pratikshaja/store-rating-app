@@ -7,10 +7,8 @@ CREATE DATABASE IF NOT EXISTS store_rating_db
 
 USE store_rating_db;
 
--- ============================================================
--- 2. USERS TABLE
--- Stores all users: admins, normal users, and store owners.
--- ============================================================
+  -- user table
+
 CREATE TABLE IF NOT EXISTS users (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name       VARCHAR(60)  NOT NULL,
@@ -30,10 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_name (name)
 );
 
--- ============================================================
--- 3. STORES TABLE
--- Each store belongs to a user with role = STORE_OWNER.
--- ============================================================
+--stores table 
 CREATE TABLE IF NOT EXISTS stores (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name       VARCHAR(60)  NOT NULL,
@@ -42,7 +37,7 @@ CREATE TABLE IF NOT EXISTS stores (
   owner_id   INT UNSIGNED NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-  -- Foreign key: owner must be an existing user (role enforced in app layer)
+  -- Foreign key: owner must be an existing user
   CONSTRAINT fk_stores_owner
     FOREIGN KEY (owner_id) REFERENCES users(id)
     ON DELETE RESTRICT
@@ -55,10 +50,9 @@ CREATE TABLE IF NOT EXISTS stores (
   INDEX idx_stores_address (address(100))
 );
 
--- ============================================================
+
 -- 4. RATINGS TABLE
--- A user can rate a store once. They can update their rating.
--- ============================================================
+
 CREATE TABLE IF NOT EXISTS ratings (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    INT UNSIGNED NOT NULL,
@@ -89,16 +83,9 @@ CREATE TABLE IF NOT EXISTS ratings (
   INDEX idx_ratings_store (store_id)
 );
 
--- ============================================================
+
 -- 5. SEED: First Admin Account
---
--- This creates the initial administrator account.
--- Password below is the bcrypt hash of: Admin@12345
--- (8 chars, 1 uppercase, 1 special — meets all validation rules)
---
--- IMPORTANT: After seeding, log in via the API and change your
--- password immediately using PATCH /api/auth/password
--- ============================================================
+
 INSERT INTO users (name, email, password, address, role)
 VALUES (
   'System Administrator Account',
@@ -107,12 +94,4 @@ VALUES (
   '123 Admin Street, System City, 000001',
   'ADMIN'
 )
-ON DUPLICATE KEY UPDATE id = id;  -- safe to re-run: won't duplicate
-
--- ============================================================
--- NOTE: The password hash above is for "password" (a common
--- default for development seeds). Change it immediately!
---
--- To generate a new hash, run this Node.js one-liner:
---   node -e "const b=require('bcrypt'); b.hash('YourPassword@1',10).then(console.log)"
--- ============================================================
+ON DUPLICATE KEY UPDATE id = id;  

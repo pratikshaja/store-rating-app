@@ -1,84 +1,91 @@
 
 const bcrypt = require('bcrypt');
-const jwt    = require('jsonwebtoken');
-const pool   = require('../config/db');
-
+const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 
 const SALT_ROUNDS = 10;
 
-
+// Generate JWT token
 const generateToken = (user) => {
   const payload = {
-    id:    user.id,
+    id: user.id,
     email: user.email,
-    role:  user.role,
+    role: user.role,
   };
+
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
   });
 };
 
-
+// Register a new normal user
 const register = async (req, res, next) => {
   try {
     const { name, email, password, address } = req.body;
 
-    // 1. Check if email is already taken
-    const [existing] = await pool.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
-    if (existing.length > 0) {
+    // Check if email already exists
+    const existingUser = await User.findOne({
+      where: { email },
+      attributes: ['id'],
+    });
+
+    if (existingUser) {
       return res.status(409).json({
         success: false,
         message: 'An account with this email already exists.',
       });
     }
 
-  
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    
-    const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, address, role)
-       VALUES (?, ?, ?, ?, 'USER')`,
-      [name.trim(), email, hashedPassword, address || null]
-    );
+    // Create user
+    const user = await User.create({
+      name: name.trim(),
+      email,
+      password: hashedPassword,
+      address: address || null,
+      role: 'USER',
+    });
 
-    // 4. Respond with the new user's ID (no password hash!)
     return res.status(201).json({
       success: true,
       message: 'Account created successfully. You can now log in.',
-      data: { id: result.insertId, email, role: 'USER' },
+      data: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (err) {
     next(err);
   }
 };
 
-
+// Login
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Find the user by email
-    const [rows] = await pool.query(
-      'SELECT id, name, email, password, role FROM users WHERE email = ?',
-      [email]
-    );
+    // Find user by email
+    const user = await User.findOne({
+      where: { email },
+      attributes: ['id', 'name', 'email', 'password', 'role'],
+    });
 
-    // Use a generic message — never tell attackers which part was wrong
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.',
       });
     }
 
-    const user = rows[0];
+    // Compare password with stored hash
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.password
+    );
 
-    // 2. Compare the provided password against the stored hash
-    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -86,20 +93,19 @@ const login = async (req, res, next) => {
       });
     }
 
-    // 3. Generate a JWT token
+    // Generate token
     const token = generateToken(user);
 
-    // 4. Return the token and basic user info (no password hash!)
     return res.status(200).json({
       success: true,
       message: 'Login successful.',
       data: {
         token,
         user: {
-          id:    user.id,
-          name:  user.name,
+          id: user.id,
+          name: user.name,
           email: user.email,
-          role:  user.role,
+          role: user.role,
         },
       },
     });
@@ -108,20 +114,21 @@ const login = async (req, res, next) => {
   }
 };
 
-// ---------------------------------------------------------------
-// GET /api/auth/me
-// Protected — requires a valid JWT
-// Returns the full profile of the currently logged-in user
-// ---------------------------------------------------------------
+// Get logged-in user's profile
 const getMe = async (req, res, next) => {
   try {
-    // req.user is set by the authenticate middleware
-    const [rows] = await pool.query(
-      'SELECT id, name, email, address, role, created_at FROM users WHERE id = ?',
-      [req.user.id]
-    );
+    const user = await User.findByPk(req.user.id, {
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        'role',
+        'created_at',
+      ],
+    });
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found.',
@@ -130,33 +137,36 @@ const getMe = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      data: rows[0],
+      data: user,
     });
   } catch (err) {
     next(err);
   }
 };
 
-// ---------------------------------------------------------------
-// PATCH /api/auth/password
-// Protected — any logged-in user can change their own password
-// ---------------------------------------------------------------
+// Change password
 const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // 1. Fetch the user's current hashed password from DB
-    const [rows] = await pool.query(
-      'SELECT id, password FROM users WHERE id = ?',
-      [req.user.id]
-    );
+    // Find logged-in user
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'password'],
+    });
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
     }
 
-    // 2. Verify the current password is correct
-    const isValid = await bcrypt.compare(currentPassword, rows[0].password);
+    // Verify current password
+    const isValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
     if (!isValid) {
       return res.status(401).json({
         success: false,
@@ -164,14 +174,12 @@ const changePassword = async (req, res, next) => {
       });
     }
 
-    // 3. Hash the new password
+    // Hash new password
     const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
-    // 4. Update the database
-    await pool.query(
-      'UPDATE users SET password = ? WHERE id = ?',
-      [newHash, req.user.id]
-    );
+    // Update password
+    user.password = newHash;
+    await user.save();
 
     return res.status(200).json({
       success: true,
@@ -182,4 +190,9 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe, changePassword };
+module.exports = {
+  register,
+  login,
+  getMe,
+  changePassword,
+};

@@ -1,22 +1,50 @@
 
+const { ValidationError, UniqueConstraintError, ForeignKeyConstraintError } =
+  require('sequelize');
+
 const errorHandler = (err, req, res, next) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error('🔴 Error:', err);
-  } else {
-    console.error('🔴 Error:', err.message);
+  if (res.headersSent) {
+    return next(err);
   }
 
-  const statusCode = err.statusCode || 500;
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Error:', err);
+  } else {
+    console.error('Error:', err.message);
+  }
 
-  const message =
-    statusCode === 500 && process.env.NODE_ENV === 'production'
-      ? 'An internal server error occurred.'
-      : err.message || 'Something went wrong.';
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Something went wrong.';
 
-  res.status(statusCode).json({
+  // Sequelize validation errors
+  if (err instanceof ValidationError) {
+    statusCode = 400;
+    message = err.errors.map((item) => item.message).join(', ');
+  }
+
+  // Duplicate email or another unique field
+  if (err instanceof UniqueConstraintError) {
+    statusCode = 409;
+    message = 'A record with this email or unique value already exists.';
+  }
+
+  // Invalid foreign key, such as a non-existing owner
+  if (err instanceof ForeignKeyConstraintError) {
+    statusCode = 400;
+    message = 'The referenced record does not exist or cannot be used.';
+  }
+
+  // Hide internal error details in production
+  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+    message = 'An internal server error occurred.';
+  }
+
+  return res.status(statusCode).json({
     success: false,
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    ...(process.env.NODE_ENV === 'development' && {
+      stack: err.stack,
+    }),
   });
 };
 

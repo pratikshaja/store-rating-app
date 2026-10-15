@@ -1,31 +1,41 @@
 
 const bcrypt = require('bcrypt');
-const pool   = require('../config/db');
+const { Op, fn, col, literal } = require('sequelize');
+const { User, Store, Rating } = require('../models');
 
 const SALT_ROUNDS = 10;
 
-const USER_SORT_ALLOWLIST  = ['name', 'email', 'address', 'role', 'created_at'];
-const STORE_SORT_ALLOWLIST = ['name', 'email', 'address', 'created_at'];
+const USER_SORT_ALLOWLIST = [
+  'name',
+  'email',
+  'address',
+  'role',
+  'created_at',
+];
 
+const STORE_SORT_ALLOWLIST = [
+  'name',
+  'email',
+  'address',
+  'created_at',
+];
 
+// Dashboard: total users, stores and ratings
 const getDashboard = async (req, res, next) => {
   try {
-    const [
-      [usersResult],
-      [storesResult],
-      [ratingsResult],
-    ] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS total_users FROM users'),
-      pool.query('SELECT COUNT(*) AS total_stores FROM stores'),
-      pool.query('SELECT COUNT(*) AS total_ratings FROM ratings'),
-    ]);
+    const [total_users, total_stores, total_ratings] =
+      await Promise.all([
+        User.count(),
+        Store.count(),
+        Rating.count(),
+      ]);
 
     return res.status(200).json({
       success: true,
       data: {
-        total_users:   usersResult[0].total_users,
-        total_stores:  storesResult[0].total_stores,
-        total_ratings: ratingsResult[0].total_ratings,
+        total_users,
+        total_stores,
+        total_ratings,
       },
     });
   } catch (err) {
@@ -33,15 +43,18 @@ const getDashboard = async (req, res, next) => {
   }
 };
 
+// Create a normal user, admin or store owner
 const createUser = async (req, res, next) => {
   try {
     const { name, email, password, address, role } = req.body;
 
-    const [existing] = await pool.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
-    if (existing.length > 0) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser) {
       return res.status(409).json({
         success: false,
         message: 'An account with this email already exists.',
@@ -50,109 +63,23 @@ const createUser = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, address, role)
-       VALUES (?, ?, ?, ?, ?)`,
-      [name.trim(), email, hashedPassword, address || null, role]
-    );
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      address: address ? address.trim() : null,
+      role,
+    });
 
     return res.status(201).json({
       success: true,
       message: `${role} account created successfully.`,
-      data: { id: result.insertId, name: name.trim(), email, role },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
-const getUsers = async (req, res, next) => {
-  try {
-    const { name, email, address, role, sort = 'created_at', order = 'asc' } = req.query;
-
-    const sortColumn = USER_SORT_ALLOWLIST.includes(sort) ? sort : 'created_at';
-    const sortOrder  = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-
-    const conditions = [];
-    const params     = [];
-
-    if (name) {
-      conditions.push('name LIKE ?');
-      params.push(`%${name}%`);
-    }
-    if (email) {
-      conditions.push('email LIKE ?');
-      params.push(`%${email}%`);
-    }
-    if (address) {
-      conditions.push('address LIKE ?');
-      params.push(`%${address}%`);
-    }
-    if (role) {
-      conditions.push('role = ?');
-      params.push(role.toUpperCase());
-    }
-
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
-
-    const sql = `
-      SELECT id, name, email, address, role, created_at
-      FROM users
-      ${whereClause}
-      ORDER BY ${sortColumn} ${sortOrder}
-    `;
-
-    const [rows] = await pool.query(sql, params);
-
-    return res.status(200).json({
-      success: true,
-      count:   rows.length,
-      data:    rows,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
-const getUserById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const [rows] = await pool.query(
-      'SELECT id, name, email, address, role, created_at FROM users WHERE id = ?',
-      [id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
-    }
-
-    const user = rows[0];
-
-    let storeInfo = null;
-    if (user.role === 'STORE_OWNER') {
-      const [storeRows] = await pool.query(
-        `SELECT s.id, s.name, s.email, s.address,
-                ROUND(AVG(r.rating), 2) AS avg_rating,
-                COUNT(r.id) AS total_ratings
-         FROM stores s
-         LEFT JOIN ratings r ON r.store_id = s.id
-         WHERE s.owner_id = ?
-         GROUP BY s.id`,
-        [id]
-      );
-      storeInfo = storeRows;
-    }
-
-    return res.status(200).json({
-      success: true,
       data: {
-        ...user,
-        ...(storeInfo && { stores: storeInfo }),
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        address: user.address,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -160,50 +87,182 @@ const getUserById = async (req, res, next) => {
   }
 };
 
+// List users with filters and sorting
+const getUsers = async (req, res, next) => {
+  try {
+    const {
+      name,
+      email,
+      address,
+      role,
+      sort = 'created_at',
+      order = 'asc',
+    } = req.query;
 
+    const sortColumn = USER_SORT_ALLOWLIST.includes(sort)
+      ? sort
+      : 'created_at';
+
+    const sortOrder = String(order).toLowerCase() === 'desc'
+      ? 'DESC'
+      : 'ASC';
+
+    const where = {};
+
+    if (name) {
+      where.name = { [Op.like]: `%${name}%` };
+    }
+
+    if (email) {
+      where.email = { [Op.like]: `%${email}%` };
+    }
+
+    if (address) {
+      where.address = { [Op.like]: `%${address}%` };
+    }
+
+    if (role) {
+      where.role = String(role).toUpperCase();
+    }
+
+    const users = await User.findAll({
+      where,
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        'role',
+        'created_at',
+      ],
+      order: [[sortColumn, sortOrder]],
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get one user's details
+const getUserById = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.params.id, {
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        'role',
+        'created_at',
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    const data = user.toJSON();
+
+    if (user.role === 'STORE_OWNER') {
+      const stores = await Store.findAll({
+        where: { owner_id: user.id },
+        attributes: [
+          'id',
+          'name',
+          'email',
+          'address',
+          [
+            fn('ROUND', fn('AVG', col('ratings.rating')), 2),
+            'avg_rating',
+          ],
+          [
+            fn('COUNT', col('ratings.id')),
+            'total_ratings',
+          ],
+        ],
+        include: [
+          {
+            model: Rating,
+            as: 'ratings',
+            attributes: [],
+            required: false,
+          },
+        ],
+        group: ['Store.id'],
+        order: [['name', 'ASC']],
+      });
+
+      data.stores = stores;
+    }
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Create a store for an existing store owner
 const createStore = async (req, res, next) => {
   try {
     const { name, email, address, owner_id } = req.body;
 
-    const [ownerRows] = await pool.query(
-      'SELECT id, name FROM users WHERE id = ? AND role = ?',
-      [owner_id, 'STORE_OWNER']
-    );
+    const owner = await User.findOne({
+      where: {
+        id: owner_id,
+        role: 'STORE_OWNER',
+      },
+      attributes: ['id', 'name'],
+    });
 
-    if (ownerRows.length === 0) {
+    if (!owner) {
       return res.status(400).json({
         success: false,
-        message: 'Owner not found or the specified user is not a Store Owner.',
+        message:
+          'Owner not found or the specified user is not a Store Owner.',
       });
     }
 
-    const [existingStore] = await pool.query(
-      'SELECT id FROM stores WHERE email = ?',
-      [email]
-    );
-    if (existingStore.length > 0) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingStore = await Store.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingStore) {
       return res.status(409).json({
         success: false,
         message: 'A store with this email already exists.',
       });
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO stores (name, email, address, owner_id)
-       VALUES (?, ?, ?, ?)`,
-      [name.trim(), email, address.trim(), owner_id]
-    );
+    const store = await Store.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      address: address.trim(),
+      owner_id: owner.id,
+    });
 
     return res.status(201).json({
       success: true,
       message: 'Store created successfully.',
       data: {
-        id:      result.insertId,
-        name:    name.trim(),
-        email,
-        address: address.trim(),
-        owner_id,
-        owner_name: ownerRows[0].name,
+        id: store.id,
+        name: store.name,
+        email: store.email,
+        address: store.address,
+        owner_id: owner.id,
+        owner_name: owner.name,
       },
     });
   } catch (err) {
@@ -211,62 +270,99 @@ const createStore = async (req, res, next) => {
   }
 };
 
+// List stores with filters, owner details, ratings and sorting
 const getStores = async (req, res, next) => {
   try {
-    const { name, email, address, sort = 'created_at', order = 'asc' } = req.query;
+    const {
+      name,
+      email,
+      address,
+      sort = 'created_at',
+      order = 'asc',
+    } = req.query;
 
-    const sortColumn = STORE_SORT_ALLOWLIST.includes(sort) ? sort : 'created_at';
-    const sortOrder  = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    const sortColumn = STORE_SORT_ALLOWLIST.includes(sort)
+      ? sort
+      : 'created_at';
 
-    const conditions = [];
-    const params     = [];
+    const sortOrder = String(order).toLowerCase() === 'desc'
+      ? 'DESC'
+      : 'ASC';
+
+    const where = {};
 
     if (name) {
-      conditions.push('s.name LIKE ?');
-      params.push(`%${name}%`);
+      where.name = { [Op.like]: `%${name}%` };
     }
+
     if (email) {
-      conditions.push('s.email LIKE ?');
-      params.push(`%${email}%`);
+      where.email = { [Op.like]: `%${email}%` };
     }
+
     if (address) {
-      conditions.push('s.address LIKE ?');
-      params.push(`%${address}%`);
+      where.address = { [Op.like]: `%${address}%` };
     }
 
-    const whereClause = conditions.length > 0
-      ? `WHERE ${conditions.join(' AND ')}`
-      : '';
+    const stores = await Store.findAll({
+      where,
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'address',
+        'owner_id',
+        'created_at',
+        [
+          fn('ROUND', fn('AVG', col('ratings.rating')), 2),
+          'avg_rating',
+        ],
+        [
+          fn('COUNT', col('ratings.id')),
+          'total_ratings',
+        ],
+      ],
+      include: [
+        {
+          model: User,
+          as: 'owner',
+          attributes: ['name'],
+          required: true,
+        },
+        {
+          model: Rating,
+          as: 'ratings',
+          attributes: [],
+          required: false,
+        },
+      ],
+      group: ['Store.id', 'owner.id'],
+      order: [[sortColumn, sortOrder]],
+    });
 
-    const sql = `
-      SELECT
-        s.id,
-        s.name,
-        s.email,
-        s.address,
-        s.owner_id,
-        u.name AS owner_name,
-        ROUND(AVG(r.rating), 2) AS avg_rating,
-        COUNT(r.id) AS total_ratings,
-        s.created_at
-      FROM stores s
-      LEFT JOIN users u   ON u.id = s.owner_id
-      LEFT JOIN ratings r ON r.store_id = s.id
-      ${whereClause}
-      GROUP BY s.id, s.name, s.email, s.address, s.owner_id, u.name, s.created_at
-      ORDER BY s.${sortColumn} ${sortOrder}
-    `;
+    const data = stores.map((store) => {
+      const item = store.toJSON();
 
-    const [rows] = await pool.query(sql, params);
+      item.owner_name = item.owner ? item.owner.name : null;
+      delete item.owner;
+
+      return item;
+    });
 
     return res.status(200).json({
       success: true,
-      count:   rows.length,
-      data:    rows,
+      count: data.length,
+      data,
     });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { getDashboard, createUser, getUsers, getUserById, createStore, getStores };
+module.exports = {
+  getDashboard,
+  createUser,
+  getUsers,
+  getUserById,
+  createStore,
+  getStores,
+};

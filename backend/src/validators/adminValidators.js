@@ -7,7 +7,7 @@ const createUser = [
   body('name')
     .trim()
     .notEmpty().withMessage('Name is required.')
-    .isLength({ min: 10 }).withMessage('Name must be at least 10 characters.')
+    .isLength({ min: 20 }).withMessage('Name must be at least 20 characters.')
     .isLength({ max: 60 }).withMessage('Name must not exceed 60 characters.'),
 
   body('email')
