@@ -39,17 +39,15 @@ I built this project to practice backend development, database management, and f
 
 ### 1. Clone the Repository
 
-```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd YOUR_PROJECT_FOLDER
-```
+git clone https://github.com/pratikshaja/store-rating-app.git
+cd store_rating_app
 
 Replace the repository URL and folder name with your actual details.
 
 ### 2. Set Up the Database
 
 - Start MySQL.
-- Create the database using the provided `database/schema.sql` file.
+- Create the database using the provided `backend/database/schema.sql` file.
 - Check that the database and tables are created successfully.
 
 ### 3. Set Up the Backend
@@ -60,25 +58,6 @@ Open the backend folder:
 cd backend
 npm install
 ```
-
-Create a `.env` file using the required environment variables:
-
-```env
-PORT=5000
-NODE_ENV=development
-
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=store_rating_db
-DB_USER=your_mysql_username
-DB_PASSWORD=your_mysql_password
-
-JWT_SECRET=your_secret_key
-JWT_EXPIRES_IN=24h
-```
-
-Replace the example values with your local configuration. Do not commit your `.env` file to GitHub.
-
 Start the backend:
 
 ```bash
@@ -99,7 +78,7 @@ Make sure the frontend API URL points to the running backend server.
 
 ## Database
 
-The `database/schema.sql` file contains the SQL statements needed to create the database tables and their relationships.
+The `backend/database/schema.sql` file contains the SQL statements needed to create the database tables and their relationships.
 
 Run this file before starting the application for the first time.
 
@@ -108,7 +87,6 @@ Run this file before starting the application for the first time.
 - MySQL must be running before starting the backend.
 - The backend requires valid database credentials and a JWT secret.
 - An admin account must be available in the database to access admin features.
-- Do not commit passwords, secret keys, or other sensitive information to GitHub.
 
 ## Learning Outcome
 
