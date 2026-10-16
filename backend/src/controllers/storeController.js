@@ -46,8 +46,7 @@ const getAllStores = async (req, res, next) => {
       order: [[sortColumn, sortOrder]],
     });
 
-    // Fetch the logged-in user's ratings separately to avoid
-    // counting the same rating multiple times in the average.
+  
     const myRatings = await Rating.findAll({
       where: { user_id: userId },
       attributes: ['store_id', 'rating'],

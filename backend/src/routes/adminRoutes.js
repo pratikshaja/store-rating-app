@@ -9,9 +9,7 @@ const adminValidators  = require('../validators/adminValidators');
 
 const router = express.Router();
 
-// Apply authentication and admin role check to ALL routes in this file.
-// Any request without a valid ADMIN token is rejected before
-// reaching the controller.
+
 router.use(authenticate);
 router.use(authorize('ADMIN'));
 

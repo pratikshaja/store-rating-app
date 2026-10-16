@@ -10,9 +10,9 @@ const router = express.Router();
 
 // Public routes
 router.post('/register',
-  authValidators.register,  // 1. Run validation rules
-  validate,                 // 2. Check results — stop if any errors
-  authController.register   // 3. Execute the controller
+  authValidators.register,  
+  validate,                 
+  authController.register   
 );
 
 router.post('/login',
