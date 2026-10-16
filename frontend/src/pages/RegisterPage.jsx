@@ -1,22 +1,3 @@
-// src/pages/RegisterPage.jsx
-// ---------------------------------------------------------------
-// Register Page
-//
-// What this page does:
-//   1. Shows a registration form: Name, Email, Address, Password,
-//      Confirm Password.
-//   2. Validates the form on the frontend BEFORE sending to backend,
-//      using the same rules the backend enforces:
-//        - Name: 10–60 characters
-//        - Password: 8–16 chars, at least 1 uppercase, 1 special char
-//        - Confirm Password must match Password
-//   3. Calls POST /api/auth/register on submit.
-//   4. On success → shows a success message and a link to Login.
-//   5. On error → shows the backend's error message.
-//
-// Note: Registration is only for normal USER accounts.
-//       Admin creates STORE_OWNER and ADMIN accounts via the dashboard.
-// ---------------------------------------------------------------
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -37,16 +18,14 @@ function RegisterPage() {
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState(false);  // true after registration works
 
-  // ── Generic change handler (works for all fields) ─────────────
-  // When the user types in any field, update the form state.
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   // ── Front-end validation ──────────────────────────────────────
-  // Returns an error message string if invalid, or '' if valid.
-  // Rules match the backend's authValidators.js exactly.
+
   const validate = () => {
     const { name, email, password, confirmPassword } = form;
 
@@ -85,8 +64,7 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      // Build the request body.
-      // Do NOT include confirmPassword — the backend doesn't expect it.
+
       const payload = {
         name:     form.name.trim(),
         email:    form.email.trim(),
@@ -94,17 +72,15 @@ function RegisterPage() {
         address:  form.address.trim() || undefined,  // optional field
       };
 
-      // Call POST /api/auth/register
+      
       await registerUser(payload);
 
       // Registration successful — show a success message
       setSuccess(true);
 
     } catch (err) {
-      // Show the backend's error message (e.g. "email already exists")
       const message =
         err.response?.data?.message ||
-        // The backend also returns validation errors as an array
         err.response?.data?.errors?.[0]?.msg ||
         err.message ||
         'Registration failed. Please try again.';
